@@ -77,7 +77,7 @@ Next, create a Tenant and a Project with you desired framework (e.g. SOC2). Base
 You can setup email (for sending user invites) as well by setting the following environment variables (docker-compose file or elsewhere)  
 
 ```
-MAIL_SERVER : default ‘localhost’
+MAIL_SERVER : default 'localhost'
 MAIL_PORT : default 25
 MAIL_USERNAME : default None
 MAIL_PASSWORD : default None
@@ -273,3 +273,68 @@ And here is how you use the token to authenticate (curl as an example)
 TOKEN="TOKEN HERE"
 curl <gapps-host>/api/v1/tenants -H "token: $TOKEN"
 ```
+
+### Deployment with SSL and Data Persistence
+
+#### Prerequisites
+- Docker and Docker Compose installed
+- Domain name pointed to your server (configured for grc.digissllc.com)
+- Ports 80 and 443 available and accessible
+- Git installed
+
+#### Quick Deployment Steps
+
+1. Switch to develop branch:
+```bash
+git checkout develop
+```
+
+2. Run the setup script:
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+3. Start the application:
+```bash
+docker-compose up -d
+```
+
+#### Configuration Files
+
+The deployment setup includes:
+
+- `docker-compose.yml`: Main configuration with Traefik SSL, application, and database services
+- `traefik/traefik.yml`: SSL and reverse proxy configuration
+- `setup.sh`: Automated deployment setup script
+
+#### Data Persistence
+
+The following data is persisted:
+- Application data: `./host_data:/app/data`
+- PostgreSQL data: `postgres_data:/data/postgres`
+- SSL certificates: `./traefik/acme.json`
+
+#### SSL Configuration
+
+The application is configured with automatic SSL certificate management using Let's Encrypt through Traefik. The configuration:
+- Automatically obtains and renews SSL certificates
+- Redirects HTTP to HTTPS
+- Secures all application traffic
+
+#### Troubleshooting Deployment
+
+1. Check container status:
+```bash
+docker-compose ps
+```
+
+2. View logs:
+```bash
+docker-compose logs -f
+```
+
+3. Common issues:
+   - Ports 80/443 already in use
+   - Domain DNS not configured correctly
+   - Permission issues with acme.json
