@@ -1,5 +1,19 @@
 version: '3'
 services:
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/acme.json:/acme.json
+      - ./traefik/traefik.yml:/traefik.yml
+    networks:
+      - web_nw
+
   gapps:
     container_name: gapps
     image: bmarsh13/gapps:3.5.3
@@ -8,8 +22,8 @@ services:
     networks:
       - db_nw
       - web_nw
-    ports:
-      - "5000:5000"
+    #ports:
+    #  - "5000:5000"
     restart: unless-stopped
     environment:
       - SQLALCHEMY_DATABASE_URI=postgresql://${POSTGRES_USER:-db1}:${POSTGRES_PASSWORD:-db1}@${POSTGRES_HOST:-postgres}/${POSTGRES_DB:-db1}
@@ -24,6 +38,15 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-db1}
       - POSTGRES_DB=${POSTGRES_DB:-db1}
       - GUNICORN_WORKERS=2
+    volumes:
+      - ./host_data:/app/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gapps.rule=Host(`grc.digissllc.com`)"
+      - "traefik.http.routers.gapps.entrypoints=websecure"
+      - "traefik.http.routers.gapps.tls.certresolver=letsencrypt"
+      - "traefik.http.services.gapps.loadbalancer.server.port=5000"
+
   gapps-worker:
     container_name: gapps-worker
     image: bmarsh13/gapps:3.5.3
@@ -46,6 +69,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-db1}
       - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-1}
       - WORKER_LOG_LEVEL=DEBUG
+
   postgres:
     container_name: postgres
     image: postgres
@@ -54,8 +78,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-db1}
       POSTGRES_DB: ${POSTGRES_DB:-db1}
       PGDATA: /data/postgres
-    #volumes:
-    #   - postgres:/data/postgres
+    volumes:
+      - postgres_data:/data/postgres
     #ports:
     #  - "5432:5432"
     networks:
@@ -69,3 +93,7 @@ networks:
     driver: bridge
 volumes:
   dbdata:
+  app_data:
+    driver: local
+  postgres_data:
+    driver: local
